@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+sessions/
+downloads/
+*.session
+database/
+banned.txt
+banned_numbers.txt
+max_runs.txt
+last_runs.txt
+channel_id.txt
+bot.log
+expire.json
+.env
+messages.db
+self_error.log
