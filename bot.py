@@ -263,8 +263,7 @@ async def send_main_menu(chat_id, user_id, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("قوانین", callback_data="rules", style='danger')
         ],
         [
-            InlineKeyboardButton("آموزش", callback_data="edu_main", style='primary'), 
-           InlineKeyboardButton("پشتیبانی", url="https://t.me/uezrz", style='primary')
+            InlineKeyboardButton("پشتیبانی", url="https://t.me/parham_1218", style='primary')
         ] 
     ]
     if is_owner(user_id):
