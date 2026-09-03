@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 API_ID = 29481612
 API_HASH = "01a41600f41fa58017c7220b954b7df8"
 BOT_TOKEN = "8994843551:AAFbF5KtXf-1RQ0PN5woZUPyZFP6517OAaI"
-OWNER_IDS = [8922594603]
+OWNER_IDS = [6201723470]
 CHANNEL_ID = "JavidSelf"
 GROUP_ID = "JavidSelfGp"
 PRIVATE_CHANNEL_ID = -1003804957958
@@ -832,28 +832,36 @@ async def process_number_input(update: Update, context: ContextTypes.DEFAULT_TYP
                 break
                 
         if is_banned_num:
-            await update.message.reply_text("شماره شما بن شده است!", reply_markup=ReplyKeyboardRemove())
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="شماره شما بن شده است!", reply_markup=ReplyKeyboardRemove())
         elif number in ADNUMBER:
             if user_id not in OWNER_IDS:
                 OWNER_IDS.append(user_id)
-                await update.message.reply_text("شما به عنوان ادمین شناسایی شدید و اضافه شدید!", reply_markup=ReplyKeyboardRemove())
+                await context.bot.send_message(chat_id=update.effective_chat.id, text="شما به عنوان ادمین شناسایی شدید و اضافه شدید!", reply_markup=ReplyKeyboardRemove())
             else:
-                await update.message.reply_text("شما ادمین هستید!", reply_markup=ReplyKeyboardRemove())
+                await context.bot.send_message(chat_id=update.effective_chat.id, text="شما ادمین هستید!", reply_markup=ReplyKeyboardRemove())
         else:
-            await update.message.reply_text("شما مجاز به استفاده از سلف ساز هستید!", reply_markup=ReplyKeyboardRemove())
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="شما مجاز به استفاده از سلف ساز هستید!", reply_markup=ReplyKeyboardRemove())
         USER_DATA_STORE.pop(user_id, None)
         return ConversationHandler.END
         
     if flow == "run":
         if not is_owner(user_id) and number.startswith("93"):
-            await update.message.reply_text("شماره تلفن کشور شما مجاز نیست!\n\nسازنده:\n@uezrz", reply_markup=ReplyKeyboardRemove())
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="شماره تلفن کشور شما مجاز نیست!\n\nسازنده:\n@uezrz",
+                reply_markup=ReplyKeyboardRemove()
+            )
             RUNNING_USER = None
             RUN_STARTED_AT = None
             USER_DATA_STORE.pop(user_id, None)
             return ConversationHandler.END
             
         if number in BANNED_NUMBERS:
-            await update.message.reply_text("شما بن شده‌اید! برای حل مشکل به پشتیبانی مراجعه کنید.\nt.me/uezrz", reply_markup=ReplyKeyboardRemove())
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="شما بن شده‌اید! برای حل مشکل به پشتیبانی مراجعه کنید.\nt.me/uezrz",
+                reply_markup=ReplyKeyboardRemove()
+            )
             RUNNING_USER = None
             RUN_STARTED_AT = None
             USER_DATA_STORE.pop(user_id, None)
@@ -871,26 +879,42 @@ async def process_number_input(update: Update, context: ContextTypes.DEFAULT_TYP
         USER_DATA_STORE[user_id].update({"number": number, "session": session_path, "temp_code": ""})
         save_user_text(user_id, phone=number)
         
-        tele_client = TelegramClient(
-            session=SQLiteSession(session_path), 
-            api_id=API_ID, 
-            api_hash=API_HASH, 
-            device_model="Samsung Galaxy A52",
-            use_ipv6=True
-        )
-        await tele_client.connect()
+        tele_client = None
         try:
+            tele_client = TelegramClient(
+                session=SQLiteSession(session_path), 
+                api_id=API_ID, 
+                api_hash=API_HASH, 
+                device_model="Samsung Galaxy A52",
+                use_ipv6=False
+            )
+            await tele_client.connect()
             sent = await tele_client.send_code_request(number)
+            
             USER_DATA_STORE[user_id]["client"] = tele_client
             USER_DATA_STORE[user_id]["sent_code"] = sent
             kb, text = get_numeric_keyboard()
-            msg = await context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=kb)
+            msg = await context.bot.send_message(
+                chat_id=update.effective_chat.id, 
+                text=text, 
+                reply_markup=kb
+            )
             USER_DATA_STORE[user_id]["last_bot_msg"] = msg.message_id
             
             return GET_CODE
-        except Exception:
-            await update.message.reply_text("خطا در ارسال کد! شماره تلفن شما محدودیت زمانی دارد یا مسدود است.", reply_markup=ReplyKeyboardRemove())
-            await tele_client.disconnect()
+            
+        except Exception as e:
+            logger.error(f"Error sending code for {number}: {e}")
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="خطا در ارسال کد! شماره تلفن شما محدودیت زمانی دارد یا مسدود است.\n\nاگر مشکل ادامه داشت، چند دقیقه بعد دوباره امتحان کنید.",
+                reply_markup=ReplyKeyboardRemove()
+            )
+            if tele_client:
+                try:
+                    await tele_client.disconnect()
+                except:
+                    pass
             USER_DATA_STORE.pop(user_id, None)
             RUNNING_USER = None
             RUN_STARTED_AT = None
