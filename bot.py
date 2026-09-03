@@ -220,16 +220,7 @@ async def update_channel_message(application: Application):
         pass
 
 async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id: int) -> bool:
-    try:
-        member1 = await context.bot.get_chat_member(chat_id=f"@{CHANNEL_ID}", user_id=user_id)
-        if member1.status in ["left", "kicked"]:
-            return False
-        member2 = await context.bot.get_chat_member(chat_id=f"@{GROUP_ID}", user_id=user_id)
-        if member2.status in ["left", "kicked", "restricted"]:
-            return False
-        return True
-    except:
-        return False
+    return True
 
 def get_numeric_keyboard(current_code=""):
     buttons = [
