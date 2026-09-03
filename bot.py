@@ -5,6 +5,7 @@ import ipaddress
 import asyncio
 import logging
 import json
+import gzip
 import urllib.request
 import urllib.error
 from contextlib import contextmanager
@@ -64,11 +65,11 @@ LAST_RUNS = {}
 ADNUMBER = ["989924991756", "989940458599"]
 
 # هدرهای مرورگر واقعی برای عبور از Cloudflare
+# نکته مهم: Accept-Encoding را حذف کردیم چون urllib خودش gzip decompress نمی‌کند
 BROWSER_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept": "application/json, text/plain, */*",
     "Accept-Language": "en-US,en;q=0.9,fa;q=0.8",
-    "Accept-Encoding": "gzip, deflate, br",
     "Origin": "https://railway.com",
     "Referer": "https://railway.com/",
     "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
@@ -178,11 +179,25 @@ def railway_graphql(token, query, variables=None):
     )
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
-            result = json.loads(resp.read().decode("utf-8"))
+            raw_bytes = resp.read()
+            
+            # بررسی اینکه آیا پاسخ gzip فشرده شده است یا نه
+            # (ممکن است سرور با وجود نداشتن Accept-Encoding، باز هم gzip بفرستد)
+            content_encoding = resp.headers.get("Content-Encoding", "").lower()
+            if content_encoding == "gzip" or raw_bytes[:2] == b'\x1f\x8b':
+                try:
+                    raw_bytes = gzip.decompress(raw_bytes)
+                except Exception as gz_err:
+                    logger.warning(f"gzip decompress failed: {gz_err}")
+            
+            result = json.loads(raw_bytes.decode("utf-8"))
     except urllib.error.HTTPError as e:
         body = ""
         try:
-            body = e.read().decode("utf-8")
+            raw = e.read()
+            if raw[:2] == b'\x1f\x8b':
+                raw = gzip.decompress(raw)
+            body = raw.decode("utf-8")
         except Exception:
             pass
         raise Exception(f"HTTP {e.code}: {e.reason} | {body[:300]}")
