@@ -6,6 +6,7 @@ import asyncio
 import logging
 import json
 import urllib.request
+import urllib.error
 from contextlib import contextmanager
 from pytz import timezone
 from datetime import timedelta, datetime
@@ -153,12 +154,20 @@ def railway_graphql(token, query, variables=None):
         data=data,
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {token.strip()}",
         },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        result = json.loads(resp.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        body = ""
+        try:
+            body = e.read().decode("utf-8")
+        except Exception:
+            pass
+        raise Exception(f"HTTP {e.code}: {e.reason} | {body[:300]}")
     if "errors" in result:
         raise Exception(result["errors"][0].get("message", str(result["errors"])))
     return result.get("data")
