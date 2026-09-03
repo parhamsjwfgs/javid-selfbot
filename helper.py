@@ -6,7 +6,7 @@ from telegram.constants import ParseMode
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = "ع؟"
+BOT_TOKEN = "8994843551:AAFbF5KtXf-1RQ0PN5woZUPyZFP6517OAaI"
 PANEL_IMAGE_URL = "https://t.me/Sspideermman2/230" 
 
 def create_button(text, callback_data, style=None):
