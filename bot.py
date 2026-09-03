@@ -766,9 +766,6 @@ async def start_run_self_flow(update: Update, context: ContextTypes.DEFAULT_TYPE
             await query.answer(f"ربات استفاده شده تا {next_time} لطفا برای ران مجدد 00:{wait_minutes}:{wait_seconds:02d} دیگر صبر کنید!", show_alert=True)
             return ConversationHandler.END
             
-        if REMAINING_RUNS <= 0:
-            await query.answer("در حال حاضر هیچ ران مجازی باقی نمانده است!", show_alert=True)
-            return ConversationHandler.END
 
     if not is_owner(user_id) and RUNNING_USER and RUNNING_USER != user_id:
         if RUN_STARTED_AT:
